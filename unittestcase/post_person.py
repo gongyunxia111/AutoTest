@@ -1,5 +1,6 @@
 import unittest
 import requests
+import jaydebeapi
 from requests.auth import HTTPBasicAuth
 
 
@@ -10,19 +11,22 @@ class PostPerson(unittest.TestCase):
         self.auth_read = HTTPBasicAuth('testUsername', 'testPassword')
         self.auth_write = HTTPBasicAuth('admin', 'testPassword')
         self.headers = {'Content-Type': 'application/json'}
+        self.conn = jaydebeapi.connect("org.h2.Driver",
+                                       "jdbc:h2:tcp://localhost:8091/mem:personDB",
+                                       ["testDBUsername", "testDBPassword"],
+                                       "D:/AutoTest/h2-1.4.200.jar")
 
     # Required check- json data is empty
-    def test_postperson_1_null(self):
+    def test_postperson_null(self):
         json = {
 
         }
         res = requests.post(url=self.url, json=json, headers=self.headers, auth=self.auth_write)
         result = res.json()
         self.assertNotEqual(res.status_code, 200)
-        print(res, result)
 
     # Required check-firstName is null
-    def test_postperson_2_firstname_null(self):
+    def test_postperson_firstname_null(self):
         json = {
             "firstName": "",
             "lastName": "roberts",
@@ -31,10 +35,9 @@ class PostPerson(unittest.TestCase):
         res = requests.post(url=self.url, json=json, headers=self.headers, auth=self.auth_write)
         result = res.json()
         self.assertNotEqual(res.status_code, 200)
-        print(res, result)
 
     # Required check-last Name is empty
-    def test_postperson_3_lastname_null(self):
+    def test_postperson_lastname_null(self):
         json = {
             "firstName": "John",
             "lastName": "",
@@ -43,10 +46,9 @@ class PostPerson(unittest.TestCase):
         res = requests.post(url=self.url, json=json, headers=self.headers, auth=self.auth_write)
         result = res.json()
         self.assertNotEqual(res.status_code, 200)
-        print(res, result)
 
     # Required check-phone Number is empty
-    def test_postperson_4_phonenumber_null(self):
+    def test_postperson_phonenumber_null(self):
         json = {
             "firstName": "Meg",
             "lastName": "Ryan",
@@ -55,10 +57,9 @@ class PostPerson(unittest.TestCase):
         res = requests.post(url=self.url, json=json, headers=self.headers, auth=self.auth_write)
         result = res.json()
         self.assertNotEqual(res.status_code, 200)
-        print(res, result)
 
     # phoneNumber length check - more than 10 digits
-    def test_postperson_5_phonenumber_eleven(self):
+    def test_postperson_phonenumber_eleven(self):
         json = {
             "firstName": "Mariah",
             "lastName": "Carey",
@@ -67,10 +68,9 @@ class PostPerson(unittest.TestCase):
         res = requests.post(url=self.url, json=json, headers=self.headers, auth=self.auth_write)
         result = res.json()
         self.assertNotEqual(res.status_code, 200)
-        print(res, result)
 
     # phone Number length check - less than 10 digits
-    def test_postperson_6_phonenumber_nine(self):
+    def test_postperson_phonenumber_nine(self):
         json = {
             "firstName": "Gareth",
             "lastName": "Gates",
@@ -79,10 +79,9 @@ class PostPerson(unittest.TestCase):
         res = requests.post(url=self.url, json=json, headers=self.headers, auth=self.auth_write)
         result = res.json()
         self.assertNotEqual(res.status_code, 200)
-        print(res, result)
 
     # Authenticated check - unauthenticated
-    def test_postperson_7_unauthorized(self):
+    def test_postperson_unauthorized(self):
         json = {
             "firstName": "Michael",
             "lastName": "Jackson",
@@ -91,10 +90,9 @@ class PostPerson(unittest.TestCase):
         res = requests.post(url=self.url, json=json, headers=self.headers)
         result = res.json()
         self.assertNotEqual(res.status_code, 200)
-        print(res, result)
 
     # Authenticated check -read only
-    def test_postperson_8_read(self):
+    def test_postperson_read(self):
         json = {
             "firstName": "Michael",
             "lastName": "Jackson",
@@ -103,44 +101,54 @@ class PostPerson(unittest.TestCase):
         res = requests.post(url=self.url, json=json, headers=self.headers, auth=self.auth_read)
         result = res.json()
         self.assertNotEqual(res.status_code, 200)
-        print(res, result)
 
     # data request
-    def test_postperson_9_normal(self):
+    def test_postperson_1_normal(self):
         json = {
-            "firstName": "lucy",
-            "lastName": "han",
-            "phoneNumber": "1234567895"
+            "firstName": "Mark",
+            "lastName": "Li",
+            "phoneNumber": "2234567899"
         }
         res = requests.post(url=self.url, json=json, headers=self.headers, auth=self.auth_write)
         result = res.json()
         self.assertEqual(200, res.status_code)
-        print(res, result)
+        id= result['id']
+        firstname = result["firstName"]
+        lastname = result["lastName"]
+        phone = result["phoneNumber"]
+        curs = self.conn.cursor()
+        sql = 'select * from PERSON where id=' + str(id)
+        curs.execute(sql)
+        person = curs.fetchone()
+        # person = curs.fetchall()
+        curs.close()
+        self.assertEqual(person[0], id)
+        self.assertEqual(str(person[1]), firstname)
+        self.assertEqual(str(person[2]), lastname)
+        self.assertEqual(person[3], phone)
 
     # Repeat data request
-    def test_postperson_10_repeat(self):
+    def test_postperson_2_repeat(self):
         json = {
-            "firstName": "lucy",
-            "lastName": "han",
-            "phoneNumber": "1234567895"
+            "firstName": "Mark",
+            "lastName": "Li",
+            "phoneNumber": "2234567899"
         }
         res = requests.post(url=self.url, json=json, headers=self.headers, auth=self.auth_write)
         result = res.json()
         self.assertNotEqual(res.status_code, 200)
-        print(res, result)
 
     # add "id": "1" parameter
-    def test_postperson_11_addid(self):
+    def test_postperson_3_addid(self):
         json = {
             "id": "1",
-            "firstName": "lily",
-            "lastName": "pan",
+            "firstName": "Kate",
+            "lastName": "Mary",
             "phoneNumber": "1934567800"
         }
         res = requests.post(url=self.url, json=json, headers=self.headers, auth=self.auth_write)
         result = res.json()
         self.assertEqual(200, res.status_code)
-        print(res, result)
 
 
 if __name__ == '__main__':
